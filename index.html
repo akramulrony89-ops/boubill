@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BOU Tutor Bill Generator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
+<style>
+:root{--bg:#f4f1ea;--sf:#fff;--tx:#1d1b16;--mu:#6b665a;--bd:#d9d3c4;--ac:#0f6b4f;--on:#fff;--pv:#e4dfd2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14160f;--sf:#1f2218;--tx:#ece8dc;--mu:#a29c8a;--bd:#38392d;--ac:#4cc79c;--on:#0b1a13;--pv:#0e100a}}
+:root[data-theme="dark"]{--bg:#14160f;--sf:#1f2218;--tx:#ece8dc;--mu:#a29c8a;--bd:#38392d;--ac:#4cc79c;--on:#0b1a13;--pv:#0e100a}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--tx);font:15px/1.45 'Noto Sans Bengali',system-ui,sans-serif}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--sf);z-index:10}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--sf);border-bottom:1px solid var(--bd);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+h1{font-size:17px;margin:0}h1 small{display:block;font-size:12px;font-weight:400;color:var(--mu)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-weight:700;border:1px solid var(--ac);background:var(--ac);color:var(--on);padding:8px 14px;border-radius:8px;cursor:pointer}
+button.g{background:transparent;color:var(--ac)}
+button:disabled{opacity:.5;cursor:wait}
+main{display:grid;grid-template-columns:minmax(300px,400px) 1fr;gap:16px;padding:16px;max-width:1300px;margin:0 auto}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+form{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:14px}
+form h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ac);margin:16px 0 6px;border-bottom:1px solid var(--bd);padding-bottom:4px}
+form h2:first-child{margin-top:0}
+label{display:block;font-size:12.5px;color:var(--mu);margin:8px 0 2px}
+input,textarea{width:100%;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:7px;padding:7px 9px}
+textarea{min-height:86px;resize:vertical}
+#msg{font-size:13px;min-height:20px;padding:0 16px;color:var(--mu);max-width:1300px;margin:8px auto 0}
+.pvw{background:var(--pv);border-radius:12px;padding:12px;overflow:hidden}
+.pvi{width:100%;overflow:hidden}
+#pv{width:794px;transform-origin:top left;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+</style>
+</head>
+<body>
+<header>
+  <h1>BOU Tutor Bill Generator<small>বাউবি টিউটর বিল ফরম — fill in, preview, download</small></h1>
+  <div class="btns">
+    <button type="button" id="bPdf">⬇ PDF</button>
+    <button type="button" id="bDoc">⬇ Word (.docx)</button>
+    <button type="button" class="g" id="bRst">Reset</button>
+  </div>
+</header>
+<div id="msg"></div>
+<main>
+  <form id="frm" onsubmit="return false"></form>
+  <div class="pvw"><div class="pvi" id="pvw"><div id="pv"></div></div></div>
+</main>
+<script>
+const BN='০১২৩৪৫৬৭৮৯',bn=s=>String(s).replace(/\d/g,d=>BN[d]),$=s=>document.querySelector(s);
+const e=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const W='শূন্য,এক,দুই,তিন,চার,পাঁচ,ছয়,সাত,আট,নয়,দশ,এগার,বার,তের,চৌদ্দ,পনের,ষোল,সতের,আঠার,ঊনিশ,বিশ,একুশ,বাইশ,তেইশ,চব্বিশ,পঁচিশ,ছাব্বিশ,সাতাশ,আটাশ,ঊনত্রিশ,ত্রিশ,একত্রিশ,বত্রিশ,তেত্রিশ,চৌত্রিশ,পঁয়ত্রিশ,ছত্রিশ,সাঁইত্রিশ,আটত্রিশ,ঊনচল্লিশ,চল্লিশ,একচল্লিশ,বিয়াল্লিশ,তেতাল্লিশ,চুয়াল্লিশ,পঁয়তাল্লিশ,ছেচল্লিশ,সাতচল্লিশ,আটচল্লিশ,ঊনপঞ্চাশ,পঞ্চাশ,একান্ন,বাহান্ন,তিপ্পান্ন,চুয়ান্ন,পঞ্চান্ন,ছাপ্পান্ন,সাতান্ন,আটান্ন,ঊনষাট,ষাট,একষট্টি,বাষট্টি,তেষট্টি,চৌষট্টি,পঁয়ষট্টি,ছেষট্টি,সাতষট্টি,আটষট্টি,ঊনসত্তর,সত্তর,একাত্তর,বাহাত্তর,তিয়াত্তর,চুয়াত্তর,পঁচাত্তর,ছিয়াত্তর,সাতাত্তর,আটাত্তর,ঊনআশি,আশি,একাশি,বিরাশি,তিরাশি,চুরাশি,পঁচাশি,ছিয়াশি,সাতাশি,আটাশি,ঊননব্বই,নব্বই,একানব্বই,বিরানব্বই,তিরানব্বই,চুরানব্বই,পঁচানব্বই,ছিয়ানব্বই,সাতানব্বই,আটানব্বই,নিরানব্বই'.split(',');
+function words(n){n=Math.floor(n);if(!n)return W[0];const p=[],cr=Math.floor(n/1e7);n%=1e7;const lk=Math.floor(n/1e5);n%=1e5;const hz=Math.floor(n/1e3);n%=1e3;const sh=Math.floor(n/100),r=n%100;
+ if(cr)p.push(W[cr%100]+' কোটি');if(lk)p.push(W[lk]+' লক্ষ');if(hz)p.push(W[hz]+' হাজার');if(sh)p.push(W[sh]+'শত');if(r)p.push(W[r]);return p.join(' ')}
+
+const F=[
+['#','Header / শিরোনাম'],
+['region','Regional centre / আঞ্চলিক কেন্দ্র','text','বগুড়া'],
+['phone','Phone & fax line','text','ফোন: ০৫১-৬২৭৯৪, ফ্যাক্স: ০৫১-৬৮০৫৮'],
+['head','Fund head (top right)','text','সরকারি শিক্ষা দেখা খাত'],
+['#','Program & appointment / প্রোগ্রাম'],
+['prog','Program name','text','সিএলপি (CLP-261)'],
+['progShort','Program short (in declaration)','text','সিএলপি-২৬১'],
+['memo','Appointment memo no. / স্মারক নম্বর','text','বাউবি/এসএসএস/সিএলপি/সম: ও টিউ: নি/৩২(০২)/২০২১/৯০৭'],
+['dateBn','Memo date (Bangla calendar)','text','০১ জ্যৈষ্ঠ ১৪৩৩ বঙ্গাব্দ'],
+['dateEn','Memo date (English calendar)','text','১৫ মে ২০২৬ খ্রিষ্টাব্দ'],
+['subject','Subject / বিষয়','text','পোল্ট্রির রোগ ও প্রতিরোধ (CLP-1206)'],
+['sem','Year / semester (line 02)','text','জানুয়ারি-জুন /২০২৬ খ্রিষ্টাব্দ'],
+['semShort','Year / semester (in declaration)','text','জানুয়ারি-জুন/২০২৬'],
+['#','Study centre / স্টাডি সেন্টার'],
+['center','Name & address','text','ইন্সটিটিউট অব লাইভস্টক সায়েন্স এন্ড টেকনোলজি, গাইবান্ধা-৫৭০০।'],
+['cph','Phone / mobile','text','+৮৮০১৭১২৭৫২৮৬০'],
+['#','Bill claimant / দাখিলকারী'],
+['name','Name','text','মোঃ একরামুল হক'],
+['desig','Designation & institute','text','প্রভাষক, আই এল এস টি, গাইবান্ধা'],
+['tph','Phone / mobile','text','+৮৮০১৭০১০৫৭১৪৩'],
+['tin','TIN number','text','169550501075'],
+['#','Bank / ব্যাংক'],
+['acc','Account number','text','0704701008226'],
+['bank','Bank & branch','text','সোনালী ব্যাংক, পিএলসি, জয়পুরহাট পূর্ব শাখা, জয়পুরহাট'],
+['rout','Routing no.','text','২০০৩৮০৪৩৮'],
+['#','Bill period & classes / ক্লাস'],
+['from','Period from','text','জানুয়ারি /২০২৬'],
+['to','Period to','text','জুন/২০২৬'],
+['total','Total classes in period (line 06)','number','10'],
+['dates','Class dates (dd/mm/yyyy — one per line or comma separated)','area','30/01/2026\n06/02/2026\n13/02/2026\n20/02/2026\n27/02/2026\n06/03/2026\n13/03/2026\n27/03/2026'],
+['taken','Classes billed (auto-fills from dates)','number','8'],
+['rate','Rate per class (Tk)','number','700']
+];
+const DEF={};let logo='',KEY='bou-bill-v1';
+const frm=$('#frm');
+F.forEach(([k,l,t,v])=>{
+  if(k==='#'){frm.insertAdjacentHTML('beforeend','<h2>'+l+'</h2>');return}
+  DEF[k]=v;
+  frm.insertAdjacentHTML('beforeend','<label for="f_'+k+'">'+l+'</label>'+(t==='area'?'<textarea id="f_'+k+'"></textarea>':'<input id="f_'+k+'" type="'+t+'">'));
+});
+frm.insertAdjacentHTML('beforeend','<h2>Logo (optional)</h2><input type="file" id="logoIn" accept="image/png,image/jpeg"><label>Adds the university emblem top-left</label>');
+
+function css(w){const P=w?'':'.pp ';return `.pp{font-family:${w?"'Nirmala UI',Vrinda,sans-serif":"'Noto Sans Bengali','Nirmala UI',sans-serif"};font-size:${w?13:12}px;line-height:1.5;color:#000;${w?'':'background:#fff;width:794px;padding:30px 38px;box-sizing:border-box;'}}
+${P}table{border-collapse:collapse;width:100%}${P}td{vertical-align:top;padding:0 2px}${P}p{margin:0 0 5px}
+.xc{text-align:center}.xr{text-align:right}.xu{text-decoration:underline}.xb{font-weight:bold}.xs{font-size:${w?11:10}px}
+.xh1{font-size:${w?24:20}px;font-weight:bold}.xh2{font-size:${w?16:14}px}
+.xbd td{border:1px solid #000;padding:3px;text-align:center;height:20px}
+.xbt td{border:1px solid #000;padding:6px}`}
+
+function build(d,w){
+  const n=+d.taken||0,rate=+d.rate||0,amt=n*rate,tc=+d.total||0,nn=bn(String(n).padStart(2,'0'));
+  const ds=d.dates.split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean);
+  let rows='';const rc=Math.max(2,Math.ceil(ds.length/7));
+  for(let i=0;i<rc;i++){rows+='<tr>'+[0,1,2,3,4,5,6].map(j=>'<td>'+e(bn(ds[i*7+j]||''))+'</td>').join('')+'</tr>'}
+  const g=k=>e(d[k]);
+  const lg=d.logo?'<img src="'+d.logo+'" style="height:64px" height="64">':'';
+  return `<div class="pp">
+<table><tr><td style="width:16%">${lg}</td><td class="xc"><div class="xh1">বাংলাদেশ উন্মুক্ত বিশ্ববিদ্যালয়</div><div class="xh2">BANGLADESH OPEN UNIVERSITY</div><div>আঞ্চলিক কেন্দ্র, ${g('region')}। ${g('phone')}</div></td><td style="width:16%"></td></tr></table>
+<p class="xr xb xu" style="border-top:1px dashed #000;margin-top:4px;padding-top:2px">${g('head')}</p>
+<p class="xc xb xu" style="margin-top:6px">টিউটরের জন্য প্রযোজ্য বিল ফরম</p>
+<p class="xc"><b class="xu">প্রোগ্রামের নাম</b>: ${g('prog')}</p>
+<table><tr><td>০১। নিয়োগপত্রের স্মারক নম্বর: ${g('memo')}</td><td class="xr" style="width:27%"><i>তারিখ ${g('dateBn')}<br>${g('dateEn')}</i></td></tr></table>
+<table><tr><td>০২। বিষয়: ${g('subject')}</td><td class="xr" style="width:42%">বর্ষ/সেমিস্টার: <b>${g('sem')}</b></td></tr></table>
+<p>০৩। স্টাডিসেন্টারের নাম ও ঠিকানা: ${g('center')}<br>&nbsp;&nbsp;&nbsp;&nbsp;(ফোন/মোবাইল নম্বর): ${g('cph')}</p>
+<p>০৪। বিল দাখিলকারীর নাম ও পদবী: ${g('name')}, ${g('desig')}।<br>&nbsp;&nbsp;&nbsp;&nbsp;(ফোন/মোবাইল নম্বর): ${g('tph')} &nbsp; TIN Number: ${g('tin')}</p>
+<p>০৫। ব্যাংক হিসাব নম্বর: ${g('acc')} ব্যাংকের নাম ও শাখার নাম: ${g('bank')} (রাউটিং নং: ${g('rout')})।</p>
+<p>০৬। বিলের সময় কাল: <b>${g('from')}</b> হতে <b>${g('to')}</b> পর্যন্ত। মোট: ${bn(tc)} (${words(tc)}) টি ক্লাস।</p>
+<p>৭। ক্লাস গ্রহণের তারিখ সমূহ:</p>
+<table class="xbd">${rows}</table>
+<p style="margin-top:6px;text-align:justify">আমি নিম্নস্বাক্ষরকারী প্রত্যয়ন করছি যে, বাউবি পরিচালিত <b>${g('progShort')}</b> প্রোগ্রামে আমি যথানিয়মে <b>${g('semShort')}</b> শিক্ষা বর্ষে/ সেমিস্টারে <b>${g('from')}</b> মাস হতে <b>${g('to')}</b> পর্যন্ত মোট <b>${nn} টি</b> ক্লাস সে মোতাবেক আমি <b>${nn} টি</b> ক্লাসের জন্য <b>${bn(rate)}×${nn}=${bn(amt)}</b> টাকার বিল দাখিল করেছি। আমার দাখিলকৃত বিলটি সঠিক আছে, সেহেতু বিলটি পরিশোধের জন্য অনুরোধ করছি। ভবিষ্যতে আরসি কর্তৃক পরিশোধিত বিলে কোনো অডিট আপত্তি হলে তা সমাধানে বাধ্য থাকব।</p>
+<table style="margin-top:6px"><tr><td style="width:62%"><br>অংকে: <b>${bn(amt)}/-</b> &nbsp;&nbsp; টাকা চেকে/ব্যাংকে জমা সাপেক্ষে বুঝে পেলাম।<br><br>কথায়: <b>${words(amt)} টাকা মাত্র</b>।</td>
+<td><p class="xr xb">টিউটরের স্বাক্ষর ও সীল</p><table align="right" style="width:130px;border:1px solid #000"><tr><td class="xc" style="height:70px;padding:6px">10/-<br>রাজস্ব স্ট্যাম্পসহ<br>স্বাক্ষর</td></tr></table></td></tr></table>
+<table class="xbt" style="margin-top:10px"><tr>
+<td style="width:50%;height:120px"><p class="xc xb xu">উপ-আঞ্চলিক কেন্দ্রের জন্য প্রযোজ্য</p>সংশ্লিষ্ট টিউটর কর্তৃক দাখিলকৃত বিলটি সঠিক আছে। আমি…………………………………………………… তারিখে স্টাডি সেন্টার পরিদর্শন করেছি। বিল পরিশোধের জন্য সুপারিশ করা হলো।<br><br><p class="xc">সহকারী আঞ্চলিক পরিচালক/উপ-আঞ্চলিক পরিচালকের স্বাক্ষর ও সীল</p></td>
+<td style="width:50%"><p class="xc xb xu">সমন্বয়কারীর জন্য প্রযোজ্য</p>উল্লেখিত তারিখসমূহে বিল দাখিলকারী টিউটর…… টি ক্লাস পরিচালনা করেছেন। তাঁর দাখিলকৃত বিলটি সঠিক। বিল পরিশোধের জন্য সুপারিশ করা হলো।<br><br><br><p class="xr xb">সমন্বয়কারীর স্বাক্ষর ও সীল</p></td></tr></table>
+<p class="xc xb xu" style="margin-top:10px">আঞ্চলিক কেন্দ্র, ${g('region')} এর জন্য প্রযোজ্য</p>
+<p style="text-align:justify">দাখিলকৃত বিল নিরীক্ষা ও যাচাই করা হয়েছে। যাচাই অন্তে…………………… টাকার বিল (কথায়:………………………………………………………) সঠিক পাওয়া গেছে। উত্থাপিত বিলটি পরিশোধ করা যায়। বিধায় বিলটি প্রদান/পাশ করার জন্য উপস্থাপিত হলো।</p>
+<p style="margin-top:14px">সেকশন অফিসার/ প্রশাসনিক কর্মকর্তা</p>
+<table><tr><td class="xb">পরীক্ষান্তে বিলটি যথাযথ ও সঠিক পাওয়া গেছে। এমতাবস্থায় বিলটি পরিশোধ করা যায়।</td><td class="xr xb" style="width:22%">উপ-পরিচালক (অর্থ ও হিসাব)</td></tr></table>
+<p style="margin-top:6px">যাচাইকৃত বিলটি সঠিক আছে বলে মনে করি। বিধায় পরিশোধের জন্য সুপারিশ করছি।</p>
+<p class="xr xb" style="margin-top:10px">উপ-পরিচালক/উপ-আঞ্চলিক পরিচালক/যুগ্ম পরিচালক</p>
+<p class="xc xb">অনুমোদিত</p>
+<p class="xr xb" style="margin-top:10px">আঞ্চলিক পরিচালক</p>
+<p class="xs" style="border-top:1px dashed #000;margin-top:10px;padding-top:4px;text-align:justify"><b>বিশেষ দ্রষ্টব্য:</b> (১) টিউটরবৃন্দ সমন্বয়কারীর মাধ্যমে বিল দাখিল করবেন এবং তাঁর প্রত্যয়ন ছাড়া বিল পরিশোধ করা যাবে না (২) টিউটরবৃন্দকে স্ব-স্ব নামে ব্যক্তিগতভাবে একসাথে এক সেমিস্টার/বর্ষের জন্য বিল দাখিল করতে হবে (৩) বিলের সাথে নিয়োগপত্র ও TIN এর ফটোকপি সংযুক্ত করতে হবে (৪) (প্রযোজ্যক্ষেত্রে) উপ-আঞ্চলিক কেন্দ্রের বিল সংশ্লিষ্ট অফিসে জমা করতে হবে এবং বাউবি’র দায়িত্বপ্রাপ্ত কর্মকর্তার সুপারিশ থাকতে হবে (৫) বাজেটে অর্থ বরাদ্দ থাকা সাপেক্ষে বিল পাওয়ার পরই উপদেশ পত্রের মাধ্যমে পরিশোধ করা হবে। তবে এক অর্থ বছরের (জুলাই-জুন) বকেয়া বিল পরবর্তী অর্থ বছরে পরিশোধের ক্ষেত্রে প্রশাসনিক জটিলতা সৃষ্টি হতে পারে। এই অর্থ বছরের বিল পরবর্তী অর্থ বছরে দাখিল না করার জন্য অনুরোধ করা হলো (৬) সঠিক ও নির্ভুলভাবে বিল দাখিল করার জন্য অনুরোধ করা হলো। বিলের ওপর ভবিষ্যতে কোনো অডিট আপত্তি হলে তা বিল গ্রহণকারীকে নিষ্পত্তি করতে হবে।</p>
+</div>`}
+
+const st=document.createElement('style');st.textContent=css(false);document.head.appendChild(st);
+function get(){const d={logo};F.forEach(([k])=>{if(k!=='#')d[k]=$('#f_'+k).value});return d}
+function fit(){const w=$('#pvw'),p=$('#pv'),s=Math.min(1,w.clientWidth/794);p.style.transform='scale('+s+')';w.style.height=(p.offsetHeight*s)+'px'}
+let tm;function upd(){$('#pv').innerHTML=build(get(),false);fit();clearTimeout(tm);tm=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(get()))}catch(_){}},300)}
+function load(){let s={};try{s=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(_){}
+  F.forEach(([k])=>{if(k!=='#')$('#f_'+k).value=s[k]!=null?s[k]:DEF[k]});logo=s.logo||''}
+frm.addEventListener('input',ev=>{
+  if(ev.target.id==='f_dates'){const c=ev.target.value.split(/[\n,;]+/).filter(x=>x.trim()).length;if(c)$('#f_taken').value=c}
+  upd()});
+$('#logoIn').addEventListener('change',ev=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{logo=r.result;upd()};r.readAsDataURL(f)});
+$('#bRst').onclick=()=>{try{localStorage.removeItem(KEY)}catch(_){}load();upd();msg('Form reset to the sample values.')};
+window.addEventListener('resize',fit);
+const msg=t=>{$('#msg').textContent=t};
+
+async function save(kind){
+  const btns=document.querySelectorAll('.btns button');btns.forEach(b=>b.disabled=true);
+  try{
+    const dl=window.claude?await claude.use('downloads'):null;
+    if(!dl){msg('Downloads are not available in this view. Open the artifact in claude.ai to download.');return}
+    const d=get(),base='CLP-261_Tutor_Bill';let data,fn;
+    if(kind==='pdf'){
+      msg('Building PDF…');
+      await Promise.all([document.fonts.load('12px "Noto Sans Bengali"'),document.fonts.load('700 12px "Noto Sans Bengali"')]);
+      const h=document.createElement('div');h.style.cssText='position:fixed;left:-10000px;top:0';h.innerHTML=build(d,false);document.body.appendChild(h);
+      const c=await html2canvas(h.firstElementChild,{scale:2,backgroundColor:'#fff'});h.remove();
+      const pdf=new jspdf.jsPDF({unit:'mm',format:'a4'}),r=c.height/c.width;let iw=210,ih=210*r;if(ih>297){ih=297;iw=297/r}
+      pdf.addImage(c.toDataURL('image/jpeg',.95),'JPEG',(210-iw)/2,0,iw,ih);
+      data=pdf.output('arraybuffer');fn=base+'.pdf';
+    }else{
+      msg('Building Word file…');
+      const html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css(true)+'</style></head><body>'+build(d,true)+'</body></html>';
+      data=htmlDocx.asBlob(html,{orientation:'portrait',margins:{top:720,right:720,bottom:720,left:720}});fn=base+'.docx';
+    }
+    await dl.save({filename:fn,data});msg('Ready — '+fn);
+  }catch(err){msg(err&&err.code==='declined'?'Download cancelled.':'Could not create the file: '+((err&&err.message)||err))}
+  finally{btns.forEach(b=>b.disabled=false)}
+}
+$('#bPdf').onclick=()=>save('pdf');$('#bDoc').onclick=()=>save('docx');
+load();upd();
+if(document.fonts)document.fonts.ready.then(fit);
+</script>
+</body>
+</html>
